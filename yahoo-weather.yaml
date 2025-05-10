@@ -1,0 +1,237 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    - uuid: 6ce302eab78b4d7cbaf0069deae72621
+      template: 'Yahoo Weather API Location'
+      name: 'Yahoo Weather API Location'
+      vendor:
+        name: Yasuwo
+        version: '0.1'
+      groups:
+        - name: Templates
+      items:
+        - uuid: 20c38e7060584d14bdb1fb12db944c27
+          name: 'Get Data'
+          type: HTTP_AGENT
+          key: yahoo.weather.data
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.body
+          url: '{$YAHOO.WEATHER.API_URL.PLACE}'
+          query_fields:
+            - name: appid
+              value: '{$YAHOO.WEATHER.APPID}'
+            - name: coordinates
+              value: '{$YAHOO.WEATHER.LONGITUDE},{$YAHOO.WEATHER.LATITUDE}'
+            - name: output
+              value: json
+          http_proxy: '{$YAHOO.WEATHER.API_HTTPPROXY}'
+          output_format: JSON
+        - uuid: 62b75dfb06244d8d8cbddec7e9ad4496
+          name: 降水量予測値(平均)
+          type: DEPENDENT
+          key: yahoo.weather.forecast.avg
+          delay: '0'
+          value_type: FLOAT
+          units: mm/h
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.Feature[*].Property.WeatherList.Weather[?(@.Type==''forecast'')].Rainfall.avg()'
+          master_item:
+            key: yahoo.weather.data
+        - uuid: 61f6a9f833ed47ad9abf5c3298fcf189
+          name: 降水量予測値(最大)
+          type: DEPENDENT
+          key: yahoo.weather.forecast.max
+          delay: '0'
+          value_type: FLOAT
+          units: mm/h
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.Feature[*].Property.WeatherList.Weather[?(@.Type==''forecast'')].Rainfall.max()'
+          master_item:
+            key: yahoo.weather.data
+          triggers:
+            - uuid: b0b0fe52a8314892a53201997fd2d51d
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>10'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=10'
+              name: やや強い雨が降り始める予想です
+              priority: WARNING
+              dependencies:
+                - name: やや強い雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>10'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=10'
+                - name: 強い雨が降り始める予想です
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>20'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=20'
+            - uuid: 30d54ad23ea04ee9976829bbf1d02e06
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>20'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=20'
+              name: 強い雨が降り始める予想です
+              priority: AVERAGE
+              dependencies:
+                - name: 強い雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>20'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=20'
+                - name: 激しい雨が降り始める予想です
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>30'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=30'
+            - uuid: 2b02eba9900a4566a9974855eaf576e6
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>30'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=30'
+              name: 激しい雨が降り始める予想です
+              priority: AVERAGE
+              dependencies:
+                - name: 激しい雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>30'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=30'
+                - name: 非常に激しい雨が降り始める予想です
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>50'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=50'
+            - uuid: 7a95d316c8074c7eafe8d3218885bf66
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>80'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=80'
+              name: 猛烈な雨が降り始める予想です
+              priority: HIGH
+              dependencies:
+                - name: 猛烈な雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>80'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=80'
+            - uuid: 7fa10d5201fd4d8f9f04104b0f3e6d46
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>0'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=0'
+              name: 雨が降り始める予想です
+              priority: WARNING
+              dependencies:
+                - name: やや強い雨が降り始める予想です
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>10'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=10'
+                - name: 雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>0'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=0'
+            - uuid: f5baf42fa0fd42f092946c48bf326c6b
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>50'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=50'
+              name: 非常に激しい雨が降り始める予想です
+              priority: AVERAGE
+              dependencies:
+                - name: 猛烈な雨が降り始める予想です
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.forecast.max)>80'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.forecast.max,{$YAHOO.WEATHER.HOLDTIME})<=80'
+                - name: 非常に激しい雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>50'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=50'
+        - uuid: ea9d59a358c746df8f1486837478f6ce
+          name: 降水量予測値(最小)
+          type: DEPENDENT
+          key: yahoo.weather.forecast.min
+          delay: '0'
+          value_type: FLOAT
+          units: mm/h
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.Feature[*].Property.WeatherList.Weather[?(@.Type==''forecast'')].Rainfall.min()'
+          master_item:
+            key: yahoo.weather.data
+        - uuid: 77c0d165f0eb4ab2a4daadf43e37828e
+          name: 降水量実測値
+          type: DEPENDENT
+          key: yahoo.weather.observation
+          delay: '0'
+          value_type: FLOAT
+          units: mm/h
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.Feature[*].Property.WeatherList.Weather[?(@.Type==''observation'')].Rainfall.first()'
+          master_item:
+            key: yahoo.weather.data
+          triggers:
+            - uuid: 1e7133effab1493eb67874e6d5e018f3
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>10'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=10'
+              name: やや強い雨が降り始めています
+              priority: WARNING
+              dependencies:
+                - name: 強い雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>20'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=20'
+            - uuid: e3043c1673a4476f9e336c9ff7c99cf1
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>20'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=20'
+              name: 強い雨が降り始めています
+              priority: AVERAGE
+              dependencies:
+                - name: 激しい雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>30'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=30'
+            - uuid: 57f19c33e407424fb7e7c6601396d634
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>30'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=30'
+              name: 激しい雨が降り始めています
+              priority: AVERAGE
+              dependencies:
+                - name: 非常に激しい雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>50'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=50'
+            - uuid: 576d50133a204503aee2907131b803ed
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>80'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=80'
+              name: 猛烈な雨が降り始めています
+              priority: HIGH
+            - uuid: 2b6dbe97d171410f987d5d9a940b7c7e
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>0'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=0'
+              name: 雨が降り始めています
+              priority: WARNING
+              dependencies:
+                - name: やや強い雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>10'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=10'
+            - uuid: 551234a270634b12a1f57d5221e298c1
+              expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>50'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=50'
+              name: 非常に激しい雨が降り始めています
+              priority: AVERAGE
+              dependencies:
+                - name: 猛烈な雨が降り始めています
+                  expression: 'last(/Yahoo Weather API Location/yahoo.weather.observation)>80'
+                  recovery_expression: 'max(/Yahoo Weather API Location/yahoo.weather.observation,{$YAHOO.WEATHER.HOLDTIME})<=80'
+      macros:
+        - macro: '{$YAHOO.WEATHER.API_HTTPPROXY}'
+        - macro: '{$YAHOO.WEATHER.API_URL.PLACE}'
+          value: 'https://map.yahooapis.jp/weather/V1/place'
+        - macro: '{$YAHOO.WEATHER.APPID}'
+          type: SECRET_TEXT
+          description: 'Yahoo! Client ID (アプリケーションID)'
+        - macro: '{$YAHOO.WEATHER.HOLDTIME}'
+          value: 1h
+          description: トリガー発動のホールドタイム。
+        - macro: '{$YAHOO.WEATHER.LATITUDE}'
+          value: '35.68678988250758'
+          description: 取得地点の緯度。デフォルトは皇居です。
+        - macro: '{$YAHOO.WEATHER.LONGITUDE}'
+          value: '139.7578008'
+          description: 取得地点の経度。デフォルトは皇居です。
